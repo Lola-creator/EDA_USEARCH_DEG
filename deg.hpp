@@ -91,7 +91,9 @@ float Grafo::distancia(const vector<float>& uno, const vector<float>& dos)
 //extend graph
 //optimize edge
 //dynamic edge optimization */
-void Grafo::busquedaR(vector<float> &dato, 
+
+//eleccion de SEED????? how
+void Grafo::busquedaR(vector<float> &datqu, 
                     vector<Vertice> resultado)
 {
     //no explorado == seeds osea respecto a seed NO LO ENTENDI MAL AYUDAAAA
@@ -109,24 +111,26 @@ void Grafo::busquedaR(vector<float> &dato,
             Vertice temp{todo[seed.vecino[i].first]};
             no_explorado.push(temp);
         }
-        //Vertice close {0, {}};
-        
+            //que seria el nuevo seed
+        Vertice cercano{no_explorado.front()};
+        float minimo_local = INT_MAX;
         while(no_explorado.size())
         {
-            //elejimos el primer valor
-            //Vertice vecino = no_explorado[0];
-            //buscar vertice mas cercano
+            //elejirr vertice
+            Vertice valor{no_explorado.front()};
+            no_explorado.pop();
             
-            //for(Vertice temp = vecino.vecino;;)
+            float local = distancia(valor.dato, datqu);
+            
+            if(minimo_local>local)
+            {
+                minimo_local = local;
+                cercano = valor;
+            }
+            
+            
         }
-        //seed = close;
+        seed = cercano;
     }
-    
-    //inicializar a cero
-    //vector<Vertice> revisado;
-    //Vertice inicial = ;
-    //elegir el mas cercano
-    //comprobar si se debe detener la busqueda
-    //explorar vecinos
-    
+
 }
