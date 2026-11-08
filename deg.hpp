@@ -11,6 +11,9 @@
 #define GRADO 4 //de cada nodo
 #define LIMITE_RANGE 5 //numero maximo de resultados que queremos devolver
 #define RADIO_MAX 6.000
+#define ESP 0.001
+//ESP del paper
+
 using namespace std;
 
 class Vertice
@@ -42,8 +45,7 @@ class Grafo
         void insertar(vector<float> & in_dato);
     private:
         void insertarA(int &, int &);
-        void busquedaR(vector<float> &dato, 
-                    vector<Vertice> );
+        void busquedaR(vector<float> & , queue<Vertice>&);
         void borrarA();
         float distancia(const vector<float>& , const vector<float>& );
 };
@@ -93,23 +95,36 @@ float Grafo::distancia(const vector<float>& uno, const vector<float>& dos)
 //dynamic edge optimization */
 
 //eleccion de SEED????? how
-void Grafo::busquedaR(vector<float> &datqu, 
-                    vector<Vertice> resultado)
+void Grafo::busquedaR(vector<float> &datqu,vector<pair<int, float>>& seeds)
 {
-    //no explorado == seeds osea respecto a seed NO LO ENTENDI MAL AYUDAAAA
-    //agarras y agregas los vecionos
-    float di_lejana = FLT_MAX;
-    vector<Vertice> ya_revisado;//se supone que esta vacio
-    float limite_D = FLT_MAX;
-    Vertice seed;
-    while(//encontramos el valor o se salio del radio
-        true)
+    vector<pair<int, float>> final = seeds;
+    float di_lejana = FLT_MAX;//del resultado, es el r chiquito
+    vector<pair<int, float>> no_explorado = seeds;
+
+    while( seeds.size())
     {
-        queue<Vertice> no_explorado;
+        int indice = -1;
+        float minimo_local = FLT_MAX;
+        int borrar = -1;
+        for(int i = 0;seeds.size();i++)
+        {
+            if(minimo_local>distancia(todo[seeds[i].first].dato, datqu))
+            {
+                indice = seeds[i].first;
+                minimo_local = distancia(todo[seeds[i].first].dato, datqu);
+                borrar = i;
+            }
+        }
+
+        seeds.erase(seeds.begin()+borrar);
+
+        //condicion de parada
+
         for(int i = 0;i<seed.vecino.size();i++)
         {
             Vertice temp{todo[seed.vecino[i].first]};
-            no_explorado.push(temp);
+            if(distancia(temp.dato, datqu) <= (di_lejana * (1+ESP)) )
+                no_explorado.push();
         }
             //que seria el nuevo seed
         Vertice cercano{no_explorado.front()};
