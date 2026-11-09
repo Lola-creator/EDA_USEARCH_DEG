@@ -16,6 +16,14 @@
 
 using namespace std;
 
+struct in_dis
+{
+    int todo_indice;
+    float distancia;
+
+    in_dis(){}
+};
+
 class Vertice
 {
     public:
@@ -98,9 +106,9 @@ float Grafo::distancia(const vector<float>& uno, const vector<float>& dos)
 void Grafo::busquedaR(vector<float> &datqu,vector<pair<int, float>>& seeds)
 {
     vector<pair<int, float>> final = seeds;
+    vector<int> explorado;
     float di_lejana = FLT_MAX;//del resultado, es el r chiquito
-    vector<pair<int, float>> no_explorado = seeds;
-
+    
     while( seeds.size())
     {
         int indice = -1;
@@ -115,37 +123,62 @@ void Grafo::busquedaR(vector<float> &datqu,vector<pair<int, float>>& seeds)
                 borrar = i;
             }
         }
-
         seeds.erase(seeds.begin()+borrar);
 
         //condicion de parada
+        if(distancia(todo[indice].dato, datqu) > di_lejana*(1+ESP))
+            return ;
+        //vecions de s chiquita
+        //lineal por ahora 
+        vector<pair<int, float>> no_explorado;//guardamos distancia a query
+        for(int i = 0;todo[indice].vecino.size();i++)
+        {
+            int vecino_in = todo[indice].vecino[i].first;
+            float dis_qu = distancia(todo[vecino_in].dato, datqu);
+            no_explorado.push_back({vecino_in, dis_qu});
+        }
 
-        for(int i = 0;i<seed.vecino.size();i++)
+        for(int i = 0;i<no_explorado.size();i++)
         {
-            Vertice temp{todo[seed.vecino[i].first]};
-            if(distancia(temp.dato, datqu) <= (di_lejana * (1+ESP)) )
-                no_explorado.push();
-        }
-            //que seria el nuevo seed
-        Vertice cercano{no_explorado.front()};
-        float minimo_local = INT_MAX;
-        while(no_explorado.size())
-        {
-            //elejirr vertice
-            Vertice valor{no_explorado.front()};
-            no_explorado.pop();
-            
-            float local = distancia(valor.dato, datqu);
-            
-            if(minimo_local>local)
+            float temp = distancia(todo[no_explorado[i].first].dato, datqu);
+            if(temp<=di_lejana * (1+ESP))
             {
-                minimo_local = local;
-                cercano = valor;
+                seeds.push_back({no_explorado[i].first, temp});
+                if(temp<= di_lejana)
+                {
+                    final.push_back({no_explorado[i].first, temp});
+                    if(final.size() > LIMITE_RANGE )
+                    {
+                        int borrar2 = -1;
+                        float temp2 = FLT_MIN;
+                        for(int a = 0;a<final.size();a++)
+                        {
+                            if(temp> final[a].second)
+                            {
+                                borrar2 = a;
+                                temp2 = final[a].second;
+                            }
+                        }
+                        final.erase(final.begin() + borrar2);
+                        temp2 = FLT_MAX;
+                        for(int a = 0;a<final.size();a++)
+                        {
+                            if(temp< final[a].second)
+                            {
+                                temp2 = final[a].second;
+                            }
+                        }
+                        di_lejana = temp2;
+                    }
+                }
+
             }
-            
-            
+
+
         }
-        seed = cercano;
+    
+        for(pair<int, float> hola:no_explorado)
+        explorado.push_back(hola.first);
     }
 
 }
