@@ -53,9 +53,10 @@ class Grafo
         void insertar(vector<float> & in_dato);
     private:
         void insertarA(int &, int &);
-        void busquedaR(vector<float> & , queue<Vertice>&);
+        void busquedaR(vector<float>&, vector<pair<int, float>> & ,vector<pair<int, float>>& );
         void borrarA();
         float distancia(const vector<float>& , const vector<float>& );
+        float best_lejano(int & indice, vector<pair<int , float>> &vec);
 };
 
 void Grafo::insertarA(int& indice1, int& indice2 )
@@ -102,11 +103,24 @@ float Grafo::distancia(const vector<float>& uno, const vector<float>& dos)
 //optimize edge
 //dynamic edge optimization */
 
+
+
+/*
+vector<int> con búsqueda lineal será lentísimo con 10000 datos. 
+Un vector<bool> del tamaño de todo indexado por id es igual de 
+simple y es instantáneo.
+
+*/
+
 //eleccion de SEED????? how
-void Grafo::busquedaR(vector<float> &datqu,vector<pair<int, float>>& seeds)
+void Grafo::busquedaR(vector<float> &datqu,vector<pair<int, float>> & final_re, vector<pair<int, float>>& seeds)
 {
-    vector<pair<int, float>> final = seeds;
+    final_re = seeds;
     vector<int> explorado;
+    for(int i = 0;i<seeds.size();i++)
+    {
+        explorado.push_back(seeds[i].first);
+    }
     float di_lejana = FLT_MAX;//del resultado, es el r chiquito
     
     while( seeds.size())
@@ -114,7 +128,7 @@ void Grafo::busquedaR(vector<float> &datqu,vector<pair<int, float>>& seeds)
         int indice = -1;
         float minimo_local = FLT_MAX;
         int borrar = -1;
-        for(int i = 0;seeds.size();i++)
+        for(int i = 0;i<seeds.size();i++)
         {
             if(minimo_local>distancia(todo[seeds[i].first].dato, datqu))
             {
@@ -131,11 +145,22 @@ void Grafo::busquedaR(vector<float> &datqu,vector<pair<int, float>>& seeds)
         //vecions de s chiquita
         //lineal por ahora 
         vector<pair<int, float>> no_explorado;//guardamos distancia a query
-        for(int i = 0;todo[indice].vecino.size();i++)
+        for(int i = 0;i<todo[indice].vecino.size();i++)
         {
             int vecino_in = todo[indice].vecino[i].first;
             float dis_qu = distancia(todo[vecino_in].dato, datqu);
             no_explorado.push_back({vecino_in, dis_qu});
+        }
+
+        for(pair<int, float> hola:no_explorado)
+        {
+            for(int i = 0;i<explorado.size();i++)
+            {
+                if(explorado[i] == hola.first)
+                {
+                    no_explorado.erase(no_explorado.begin() + i);
+                }
+            }
         }
 
         for(int i = 0;i<no_explorado.size();i++)
@@ -146,14 +171,15 @@ void Grafo::busquedaR(vector<float> &datqu,vector<pair<int, float>>& seeds)
                 seeds.push_back({no_explorado[i].first, temp});
                 if(temp<= di_lejana)
                 {
-                    final.push_back({no_explorado[i].first, temp});
-                    if(final.size() > LIMITE_RANGE )
+                    final_re.push_back({no_explorado[i].first, temp});
+                    if(final_re.size() > LIMITE_RANGE )
                     {
+                        /*
                         int borrar2 = -1;
-                        float temp2 = FLT_MIN;
+                        float temp2 = 0;
                         for(int a = 0;a<final.size();a++)
                         {
-                            if(temp> final[a].second)
+                            if(temp< final[a].second)
                             {
                                 borrar2 = a;
                                 temp2 = final[a].second;
@@ -169,16 +195,33 @@ void Grafo::busquedaR(vector<float> &datqu,vector<pair<int, float>>& seeds)
                             }
                         }
                         di_lejana = temp2;
+                        
+                        */
+                        int borrar2 = -1;
+                        best_lejano(borrar2, final_re);
+                        final_re.erase(final_re.begin() + borrar);
+                        di_lejana = best_lejano(borrar2, final_re);
                     }
                 }
-
             }
-
-
         }
     
         for(pair<int, float> hola:no_explorado)
         explorado.push_back(hola.first);
     }
 
+}
+
+float Grafo::best_lejano(int & indice, vector<pair<int , float>> &vec)
+{
+    float temp2 = 0;
+    for(int a = 0;a<vec.size();a++)
+    {
+        if(temp2< vec[a].second)
+        {
+            indice = a;
+            temp2 = vec[a].second;
+        }
+    }
+    return temp2;
 }
