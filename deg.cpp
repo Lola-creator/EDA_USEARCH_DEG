@@ -12,6 +12,9 @@ int main()
         
 
     for (int i = 0; i < g.get_num_nodos(); i++)
-        cout << "nodo " << i << " tiene " << g.get_vertice(i).vecino.size() << " vecinos\n";
+        cout << "nodo " << i << " tiene " 
+        << g.get_vertice(i).vecino.size() << " vecinos"<<endl;
+
+    
     return 0;
 }
