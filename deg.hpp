@@ -201,13 +201,14 @@ void Grafo::busquedaR(vector<float> &datqu,
 
 bool Grafo::revMRNG(int &in_1, int &in_2)
 {
-    float d12 = distancia(todo[in_1].dato, todo[in_2].dato);
+    float dentre = distancia(todo[in_1].dato, todo[in_2].dato);
     for (Pair & temp : todo[in_1].vecino) {
         int in_3 = temp.indice;
-        if (!sonVecinos(in_2, in_2)) 
+        if (!existec(in_2, in_3)) //vuelves al incio de bucle pue
             continue;      
-        if (d12 > max(in_3.distancia, dis_ono(v2, u)))
-            return false;
+        if (dentre > max(temp.distancia, dis_ono(in_2, in_3)))
+            return false;//significa que no es suficientemente importante
+            //por es o eliminas
     }
     return true;
 }
@@ -228,8 +229,39 @@ bool Grafo::existec(int &ind, int &veci)
     for (Pair & temp : todo[ind].vecino) 
     {
         if (temp.indice == veci) 
-    return true;
+        return true;
     }
     
     return false;
+}
+/*
+primero hacemos una busqueda, hacia donde deberia ser insertado
+tenemos unos d resultados
+*/
+/*
+Paso 3: extenderGrafo (Algoritmo 3)
+
+Aquí el nuevo vértice v ya está guardado en todo (sin vecinos todavía) y se le buscan d vecinos.
+
+La idea: de los resultados de la búsqueda, toma el mejor 
+b no usado, busca su vecino n con la arista más larga, quita 
+la arista (b, n), y marca ambos para conectarlos a v.
+ Cada pareja usa 2 de las d conexiones de v, y b y n quedan con
+  grado d-1 hasta recibir a v, así que el grado se mantiene.
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+void Grafo::extenderGrafo(int& indice, const vector<int>& seeds, int k_ext, float eps_ext)
+{
+
 }
