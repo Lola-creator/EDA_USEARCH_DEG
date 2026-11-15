@@ -10,7 +10,7 @@
 //#include <>
 #define DIMENSION 4
 #define GRADO 4 //de cada nodo
-#define LIMITE_RANGE 3 //numero maximo de resultados que queremos devolver
+#define LIMITE_RANGE 10 //numero maximo de resultados que queremos devolver
 #define RADIO_MAX 6.000
 #define ESP 0.5
 //ESP del paper
@@ -21,13 +21,10 @@ struct Pair
 {
     int indice;
     float distancia;
-
-    // max-heap por defecto: el tope es el de mayor distancia
-    bool operator<(const Pair& o) const { return distancia < o.distancia; }
-    // necesario para greater<Pair> (min-heap)
-    bool operator>(const Pair& o) const { return distancia > o.distancia; }
+  
+    bool operator<(Pair& o)  { return distancia < o.distancia; }
+    bool operator>(Pair& o)  { return distancia > o.distancia; }
 };
-
 class Vertice
 {
     public:
@@ -64,6 +61,8 @@ class Grafo
         bool revMRNG(int &in_1, int &in_2);
         float dis_ono(int& ind, int& ); 
         bool existec(int &ind, int &veci);
+        void balanceo(int& indice, vector<int>& seeds);//extender el grafo pero para mi balanceo
+        void quitarA(int inde1, int inde2);
 };
 
 void Grafo::busqueda()
@@ -92,8 +91,6 @@ void Grafo::insertar(vector<float> & in_dato)
             
         }
         numero_nodos++;
-         for (auto& v : todo)
-            //assert(v.vecino.size() == GRADO);
         return;
     }
    
@@ -152,7 +149,7 @@ void Grafo::busquedaR(vector<float> &datqu,
         di_lejana = FLT_MAX;
     }
     
-    while( csemillas.empty())
+    while(!csemillas.empty())
     {
         Pair temp = csemillas.top();
         csemillas.pop();
@@ -198,6 +195,10 @@ void Grafo::busquedaR(vector<float> &datqu,
 
 
 }
+/*
+La idea es evitar conexiones geométricamente redundantes 
+y favorecer una distribución de vecinos que facilite la navegación.
+*/
 
 bool Grafo::revMRNG(int &in_1, int &in_2)
 {
@@ -234,34 +235,76 @@ bool Grafo::existec(int &ind, int &veci)
     
     return false;
 }
-/*
-primero hacemos una busqueda, hacia donde deberia ser insertado
-tenemos unos d resultados
-*/
-/*
-Paso 3: extenderGrafo (Algoritmo 3)
 
-Aquí el nuevo vértice v ya está guardado en todo (sin vecinos todavía) y se le buscan d vecinos.
-
-La idea: de los resultados de la búsqueda, toma el mejor 
-b no usado, busca su vecino n con la arista más larga, quita 
-la arista (b, n), y marca ambos para conectarlos a v.
- Cada pareja usa 2 de las d conexiones de v, y b y n quedan con
-  grado d-1 hasta recibir a v, así que el grado se mantiene.
-*/
-
-
-
-
-
-
-
-
-
-
-
-
-void Grafo::extenderGrafo(int& indice, const vector<int>& seeds, int k_ext, float eps_ext)
+bool ya_esta(int x, vector<int> &vecinos) {
+    for (int e : vecinos)
+        if (e == x) return true;
+    return false;
+}
+void Grafo::balanceo(int& indice, vector<int>& seeds)
 {
+    vector<Pair> mascerca;
+    busquedaR(todo[indice].dato, mascerca, seeds);
 
+    vector<int> vecinos;      // vecinos del dato agregado osea indice
+    bool noRNG = false;
+
+    while (vecinos.size() < GRADO)
+    {
+        int contar = vecinos.size();
+
+        for (int i = 0; i < mascerca.size() && vecinos.size() < GRADO; i++)
+        {
+            int b = mascerca[i].indice;
+            //ya esta dentro de vecinos
+            if (ya_esta(b, vecinos)) 
+                continue;                 
+            if (!(noRNG || revMRNG(indice, b))) 
+                continue;  // filtro de calidad
+
+            int n = -1;
+            float mejor = -1;
+            for (Pair& temp : todo[b].vecino)
+                if (!ya_esta(temp.indice, vecinos) && temp.distancia > mejor)
+                {
+                    mejor = temp.distancia;
+                    n = temp.indice;
+                }
+            if (n == -1) continue;
+
+            quitarArista(b, n);
+            vecinos.push_back(n);
+            vecinos.push_back(b);
+        }
+
+        if (noRNG && vecinos.size() == contar) 
+            break;  // no avanzo: salir
+        noRNG = true;                                   
+    }
+
+    assert((int)vecinos.size() == GRADO);
+
+    for (int e : vecinos)
+        insertarA(indice, e);
+}
+
+void Grafo::quitarAr(int inde1, int inde2)
+{
+    vector<Pair>& lista_a = todo[inde1].vecino;
+    for (int i = 0; i < lista_a.size(); i++)
+        if (lista_a[i].indice == inde2)
+        {
+            lista_a[i] = lista_a.back();   
+            lista_a.pop_back();           
+            break;
+        }
+
+    vector<Pair>& lista_b = todo[inde2].vecino;
+    for (int i = 0; i < lista_b.size(); i++)
+        if (lista_b[i].indice == inde1)
+        {
+            lista_b[i] = lista_b.back();
+            lista_b.pop_back();
+            break;
+        }
 }
