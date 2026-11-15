@@ -9,8 +9,8 @@
 
 //#include <>
 #define DIMENSION 4
-#define GRADO 4 //de cada nodo
-#define LIMITE_RANGE 10 //numero maximo de resultados que queremos devolver
+#define GRADO 8 //de cada nodo
+#define LIMITE_RANGE 20 //numero maximo de resultados que queremos devolver
 #define RADIO_MAX 6.000
 #define ESP 0.5
 //ESP del paper
@@ -62,7 +62,7 @@ class Grafo
         float dis_ono(int& ind, int& ); 
         bool existec(int &ind, int &veci);
         void balanceo(int& indice, vector<int>& seeds);//extender el grafo pero para mi balanceo
-        void quitarA(int inde1, int inde2);
+        void quitarAr(int inde1, int inde2);
 };
 
 void Grafo::busqueda()
@@ -103,8 +103,8 @@ float Grafo::distancia(const vector<float>& uno, const vector<float>& dos)
     float suma = 0.0f;
     for(int i = 0;i<uno.size();i++)
     suma+= (uno[i] - dos[i]) * (uno[i] - dos[i]);
-    return suma;
-
+    return sqrt(suma);
+    
 }
 /* //range search
 //check mrng
@@ -163,7 +163,7 @@ void Grafo::busquedaR(vector<float> &datqu,
                 continue;
             explorado[indice_vis] = true;
 //agregas a csemilla si es menor dela distancia permitida y un poco mas
-            float dis = sqrt(distancia(todo[indice_vis].dato, datqu));
+            float dis = (distancia(todo[indice_vis].dato, datqu));
             if(dis <= (di_lejana) * (1+ESP))
             {
                 csemillas.push({indice_vis, dis});
@@ -272,7 +272,7 @@ void Grafo::balanceo(int& indice, vector<int>& seeds)
                 }
             if (n == -1) continue;
 
-            quitarArista(b, n);
+            quitarAr(b, n);
             vecinos.push_back(n);
             vecinos.push_back(b);
         }
