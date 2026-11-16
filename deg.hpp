@@ -10,9 +10,9 @@
 //#include <>
 #define DIMENSION 2
 #define GRADO 4 //de cada nodo
-#define LIMITE_RANGE 5 //numero maximo de resultados que queremos devolver
-#define RADIO_MAX 6.000
-#define ESP 0.02
+#define LIMITE_RANGE 60 //numero maximo de resultados que queremos devolver, es el k
+#define EPS 0.2f
+#define MAX_SWAP 12
 //ESP del paper
 
 using namespace std;
@@ -52,7 +52,7 @@ class Grafo
 
         void borrarN();
         void insertar(vector<float> & in_dato);
-        void busqueda(vector<float> &datqu);
+        vector<Pair> busqueda(vector<float> &datqu);
         void verificar();
     private:
         void insertarA(int &, int &);
@@ -64,7 +64,8 @@ class Grafo
         bool existec(int &ind, int &veci);
         void balanceo(int& indice, vector<int>& seeds);//extender el grafo pero para mi balanceo
         void quitarAr(int inde1, int inde2);
-        bool mejorarAr(int v1, int v2, int i_opt, int k_opt, float eps_opt);
+        void dynamicMeAr();
+        bool mejorarAr(int v1, int v2);
 };
 void Grafo::verificar()
 {
@@ -84,7 +85,7 @@ void Grafo::verificar()
         assert(adjacent_find(indi.begin(), indi.end()) == indi.end());
     }
 }
-void Grafo::busqueda(vector<float> &datqu)
+vector<Pair> Grafo::busqueda(vector<float> &datqu)
 {
     vector<Pair> final;
     vector<int >seeds = {0};
@@ -99,6 +100,7 @@ void Grafo::busqueda(vector<float> &datqu)
         }
         cout<<endl;
     }
+    return final;
 }
 
 void Grafo::insertarA(int& indice1, int& indice2 )
@@ -125,7 +127,7 @@ void Grafo::insertar(vector<float> & in_dato)
     }
     else
     {
-        vector<int> semillas = {0};      // semilla arbitraria, como dice el paper
+        vector<int> semillas = {0};      // semilla arbitraria, comdice el paper
         balanceo(indice, semillas);
     }
     numero_nodos++;
@@ -142,11 +144,12 @@ float Grafo::distancia(const vector<float>& uno, const vector<float>& dos)
 
 
 //eleccion de SEED????? how no se ayuda todavia
+//es random noma, fue pero puedo mejorarlo para la busqueda omg
 
-
+//nNOTAS PROFE ERICK
 //MPI libreria en C, gestionar paralelismo omaiga
-//para que no sea tan lento 
-//max heap para que no sea tan lento pero haz la bsuqueda en paralelo
+//para que no sea tan lento , DESPUES omg
+
 void Grafo::busquedaR(vector<float> &datqu,
     vector<Pair> &final,
     vector<int >& seeds_begin)
@@ -181,7 +184,7 @@ void Grafo::busquedaR(vector<float> &datqu,
     {
         Pair temp = csemillas.top();
         csemillas.pop();
-        if(temp.distancia > (di_lejana)*(1+ESP)) 
+        if(temp.distancia > (di_lejana)*(1+EPS)) 
         break;
 
         for(Pair & vect: todo[temp.indice].vecino)
@@ -192,7 +195,7 @@ void Grafo::busquedaR(vector<float> &datqu,
             explorado[indice_vis] = true;
 //agregas a csemilla si es menor dela distancia permitida y un poco mas
             float dis = (distancia(todo[indice_vis].dato, datqu));
-            if(dis <= (di_lejana) * (1+ESP))
+            if(dis <= (di_lejana) * (1+EPS))
             {
                 csemillas.push({indice_vis, dis});
                 //agregas a resultado si es mejor que el mas lejos de los resutlados
@@ -223,10 +226,6 @@ void Grafo::busquedaR(vector<float> &datqu,
 
 
 }
-/*
-La idea es evitar conexiones geométricamente redundantes 
-y favorecer una distribución de vecinos que facilite la navegación.
-*/
 
 bool Grafo::revMRNG(int &in_1, int &in_2)
 {
@@ -346,23 +345,23 @@ static bool contiene(const vector<Pair>& S, int x)
     return false;
 }
 
-bool Grafo::mejorarAr(int in_ind1, int in_ind2, int i_opt, int k_opt, float eps_opt)
+bool Grafo::mejorarAr(int in_ind1, int in_ind2)
 {
     //ind1 y ind2 es una arista larga y mal ayudaa
     vector<Cambio> cambiost;//temporal muy muy muy necesario
     float sin_arista = dis_ono(in_ind1, in_ind2);//lo que gano sin esta arista
     quitarAr(in_ind1, in_ind2);
     cambiost.push_back({false, in_ind1, in_ind2});
-    int ult_1 = in_ind1;//ultimas aristas quitadas
+    int ult_1 = in_ind1;//ultimas extremos
     int ult_2 = in_ind2;
 
-    while (cambiost.size() < i_opt)
+    while (cambiost.size() < MAX_SWAP)
     {
 
         float b = sin_arista;//hacems una copia
         vector<Pair> mascercanos;
         vector<int> sem = {ult_1, ult_2};//
-        busquedaR(todo[in_ind2].dato, mascercanos , sem, k_opt, eps_opt);
+        busquedaR(todo[in_ind2].dato, mascercanos , sem);
 //cercanos a indidce 2, las semilla son el mismo 1 y 2
         int nv3 = ult_1;
         int nv4 = ult_2;
@@ -378,7 +377,7 @@ bool Grafo::mejorarAr(int in_ind1, int in_ind2, int i_opt, int k_opt, float eps_
                 if (n == in_ind2) 
                     continue;
                 
-                    float cand = sin_arista - ps.distancia + pn.distancia; // ps.distancia = δ(s,v2)
+                float cand = sin_arista - ps.distancia + pn.distancia;
                 
                 if (b < cand) 
                 {   
@@ -389,7 +388,7 @@ bool Grafo::mejorarAr(int in_ind1, int in_ind2, int i_opt, int k_opt, float eps_
             }
         }
         if (b == sin_arista) 
-            break;          // sin mejora -> revert
+            break;          // sin mejora debemos revertir porque no se pudo mejorar
         ult_1 = nv3; 
         ult_2 = nv4; 
         sin_arista = b;
@@ -404,7 +403,7 @@ bool Grafo::mejorarAr(int in_ind1, int in_ind2, int i_opt, int k_opt, float eps_
             float b2 = 0; int v5 = -1, v6 = -1;
             vector<Pair> S2;
             vector<int> sem2 = {in_ind2, ult_1};
-            busquedaR(todo[in_ind1].dato, S2, sem2, k_opt, eps_opt);
+            busquedaR(todo[in_ind1].dato, S2, sem2);
             for (Pair& ps : S2)
             {
                 int s = ps.indice;
@@ -412,7 +411,8 @@ bool Grafo::mejorarAr(int in_ind1, int in_ind2, int i_opt, int k_opt, float eps_
                 for (Pair& pn : todo[s].vecino)
                 {
                     int n = pn.indice;
-                    if (n == in_ind1 || existec(in_ind1, n)) continue;   // evita aristas duplicadas
+                    if (n == in_ind1 || existec(in_ind1, n)) 
+                        continue;   
                     float cand = sin_arista + pn.distancia - ps.distancia
                                - distancia(todo[n].dato, todo[in_ind1].dato);
                     if (b2 < cand) 
@@ -431,15 +431,16 @@ bool Grafo::mejorarAr(int in_ind1, int in_ind2, int i_opt, int k_opt, float eps_
             }
         }
         else if (!existec(in_ind1, ult_2) &&
-                 sin_arista - distancia(todo[in_ind1].dato, todo[v4].dato) > 0)
+         sin_arista - distancia(todo[in_ind1].dato, todo[ult_2].dato) > 0)
         {
             vector<Pair> S1, S4;
             vector<int> sem2 = {in_ind2, ult_1};
-            busquedaR(todo[in_ind1].dato, S1, sem2, k_opt, eps_opt);
-            busquedaR(todo[v4].dato, S4, sem2, k_opt, eps_opt);
-            if (contiene(S1, in_ind1) || contiene(S4, v4))
+            busquedaR(todo[in_ind1].dato, S1, sem2);
+            busquedaR(todo[ult_2].dato, S4, sem2);
+
+            if (contiene(S1, in_ind1) || contiene(S4, ult_2))
             {
-                insertarA(in_ind1, v4);
+                insertarA(in_ind1, ult_2);
                 return true;
             }
         }
@@ -450,11 +451,48 @@ bool Grafo::mejorarAr(int in_ind1, int in_ind2, int i_opt, int k_opt, float eps_
         in_ind2 = v;
     }
 
-    // ---- línea 40: revertir ----
     for (int i = cambiost.size() - 1; i >= 0; i--)
     {
-        if (cambiost[i].agregada) quitarAr(cambiost[i].ind1, cambiost[i].ind2);
-        else               insertarA(cambiost[i].ind1, cambiost[i].ind2);
+        if (cambiost[i].agregada) 
+        {
+            quitarAr(cambiost[i].ind1, cambiost[i].ind2);
+        }
+        else  
+        {
+            insertarA(cambiost[i].ind1, cambiost[i].ind2);
+        }             
     }
     return false;
+}
+
+void Grafo::dynamicMeAr()
+{
+    if (todo.size() <= GRADO + 1) 
+        return;   
+
+    int v1 = rand() % todo.size();
+    vector<int> N;                                
+    for (Pair& p : todo[v1].vecino) 
+    {   N.push_back(p.indice);}
+
+    for (int v2 : N)
+        if (existec(v1, v2) && !revMRNG(v1, v2))  
+        {
+            mejorarAr(v1, v2);
+        }
+
+    int v2 = -1; float mx = -1;                   
+    for (Pair& p : todo[v1].vecino)
+    {
+        if (p.distancia > mx) 
+        { 
+            mx = p.distancia; 
+            v2 = p.indice; 
+        }
+    }
+        
+    if (v2 != -1) 
+    {
+        mejorarAr(v1, v2);
+    }
 }
