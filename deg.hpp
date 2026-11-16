@@ -8,11 +8,11 @@
 #include <cmath>
 
 //#include <>
-#define DIMENSION 4
-#define GRADO 8 //de cada nodo
-#define LIMITE_RANGE 20 //numero maximo de resultados que queremos devolver
+#define DIMENSION 2
+#define GRADO 4 //de cada nodo
+#define LIMITE_RANGE 5 //numero maximo de resultados que queremos devolver
 #define RADIO_MAX 6.000
-#define ESP 0.5
+#define ESP 0.02
 //ESP del paper
 
 using namespace std;
@@ -22,8 +22,8 @@ struct Pair
     int indice;
     float distancia;
   
-    bool operator<(Pair& o)  { return distancia < o.distancia; }
-    bool operator>(Pair& o)  { return distancia > o.distancia; }
+    bool operator<(const Pair& o) const { return distancia < o.distancia; }
+    bool operator>(const Pair& o) const { return distancia > o.distancia; }
 };
 class Vertice
 {
@@ -52,7 +52,8 @@ class Grafo
 
         void borrarN();
         void insertar(vector<float> & in_dato);
-        void busqueda();
+        void busqueda(vector<float> &datqu);
+        void verificar();
     private:
         void insertarA(int &, int &);
         void busquedaR(vector<float> &datqu, vector<Pair> &final, vector<int >& seeds_begin);
@@ -63,11 +64,41 @@ class Grafo
         bool existec(int &ind, int &veci);
         void balanceo(int& indice, vector<int>& seeds);//extender el grafo pero para mi balanceo
         void quitarAr(int inde1, int inde2);
+        bool mejorarAr(int v1, int v2, int i_opt, int k_opt, float eps_opt);
 };
-
-void Grafo::busqueda()
+void Grafo::verificar()
 {
+    int esperado = min(GRADO, (int)todo.size() - 1);   
+    for (int i = 0; i < (int)todo.size(); i++)
+    {
+        assert((int)todo[i].vecino.size() == esperado);   
+        vector<int> indi;//ces
+        for (Pair& tp : todo[i].vecino)
+        {
+            int j = tp.indice;
+            assert(j != i);
+            assert(existec(j, i));
+            indi.push_back(j);
+        }
+        sort(indi.begin(), indi.end());
+        assert(adjacent_find(indi.begin(), indi.end()) == indi.end());
+    }
+}
+void Grafo::busqueda(vector<float> &datqu)
+{
+    vector<Pair> final;
+    vector<int >seeds = {0};
+    busquedaR(datqu, final, seeds);
 
+    for(int i = 0; i<final.size();i++)
+    {
+        int indice = final[i].indice;
+        for(int z = 0;z<DIMENSION;z++)
+        {
+            cout<<todo[indice].dato[z]<<"  ";
+        }
+        cout<<endl;
+    }
 }
 
 void Grafo::insertarA(int& indice1, int& indice2 )
@@ -90,12 +121,14 @@ void Grafo::insertar(vector<float> & in_dato)
             insertarA(indi, indice);
             
         }
-        numero_nodos++;
-        return;
+
     }
-   
-
-
+    else
+    {
+        vector<int> semillas = {0};      // semilla arbitraria, como dice el paper
+        balanceo(indice, semillas);
+    }
+    numero_nodos++;
 }
 
 float Grafo::distancia(const vector<float>& uno, const vector<float>& dos)
@@ -106,11 +139,6 @@ float Grafo::distancia(const vector<float>& uno, const vector<float>& dos)
     return sqrt(suma);
     
 }
-/* //range search
-//check mrng
-//extend graph
-//optimize edge
-//dynamic edge optimization */
 
 
 //eleccion de SEED????? how no se ayuda todavia
@@ -154,7 +182,7 @@ void Grafo::busquedaR(vector<float> &datqu,
         Pair temp = csemillas.top();
         csemillas.pop();
         if(temp.distancia > (di_lejana)*(1+ESP)) 
-        return;
+        break;
 
         for(Pair & vect: todo[temp.indice].vecino)
         {
@@ -307,4 +335,126 @@ void Grafo::quitarAr(int inde1, int inde2)
             lista_b.pop_back();
             break;
         }
+}
+
+
+struct Cambio { bool agregada; int ind1; int ind2; };
+
+static bool contiene(const vector<Pair>& S, int x)
+{
+    for (const Pair& p : S) if (p.indice == x) return true;
+    return false;
+}
+
+bool Grafo::mejorarAr(int in_ind1, int in_ind2, int i_opt, int k_opt, float eps_opt)
+{
+    //ind1 y ind2 es una arista larga y mal ayudaa
+    vector<Cambio> cambiost;//temporal muy muy muy necesario
+    float sin_arista = dis_ono(in_ind1, in_ind2);//lo que gano sin esta arista
+    quitarAr(in_ind1, in_ind2);
+    cambiost.push_back({false, in_ind1, in_ind2});
+    int ult_1 = in_ind1;//ultimas aristas quitadas
+    int ult_2 = in_ind2;
+
+    while (cambiost.size() < i_opt)
+    {
+
+        float b = sin_arista;//hacems una copia
+        vector<Pair> mascercanos;
+        vector<int> sem = {ult_1, ult_2};//
+        busquedaR(todo[in_ind2].dato, mascercanos , sem, k_opt, eps_opt);
+//cercanos a indidce 2, las semilla son el mismo 1 y 2
+        int nv3 = ult_1;
+        int nv4 = ult_2;
+        for (Pair& ps : mascercanos)
+        {
+            int s = ps.indice;
+            if (s == in_ind1 || s == in_ind2 || 
+                existec(in_ind2, s)) 
+                continue;
+            for (Pair& pn : todo[s].vecino)
+            {
+                int n = pn.indice;
+                if (n == in_ind2) 
+                    continue;
+                
+                    float cand = sin_arista - ps.distancia + pn.distancia; // ps.distancia = δ(s,v2)
+                
+                if (b < cand) 
+                {   
+                    b = cand; 
+                    nv3 = s; 
+                    nv4 = n; 
+                }
+            }
+        }
+        if (b == sin_arista) 
+            break;          // sin mejora -> revert
+        ult_1 = nv3; 
+        ult_2 = nv4; 
+        sin_arista = b;
+
+        insertarA(in_ind2, ult_1);  
+        cambiost.push_back({true,  in_ind2, ult_1});
+        quitarAr(ult_1, ult_2);   
+        cambiost.push_back({false, ult_1, ult_2});
+
+        if (in_ind1 == ult_2)
+        {
+            float b2 = 0; int v5 = -1, v6 = -1;
+            vector<Pair> S2;
+            vector<int> sem2 = {in_ind2, ult_1};
+            busquedaR(todo[in_ind1].dato, S2, sem2, k_opt, eps_opt);
+            for (Pair& ps : S2)
+            {
+                int s = ps.indice;
+                if (s == in_ind1 || existec(in_ind1, s)) continue;
+                for (Pair& pn : todo[s].vecino)
+                {
+                    int n = pn.indice;
+                    if (n == in_ind1 || existec(in_ind1, n)) continue;   // evita aristas duplicadas
+                    float cand = sin_arista + pn.distancia - ps.distancia
+                               - distancia(todo[n].dato, todo[in_ind1].dato);
+                    if (b2 < cand) 
+                    {   b2 = cand; 
+                        v5 = s; 
+                        v6 = n; 
+                    }
+                }
+            }
+            if (b2 > 0)
+            {
+                insertarA(in_ind1, v5);
+                insertarA(in_ind1, v6);
+                quitarAr(v5, v6);
+                return true;
+            }
+        }
+        else if (!existec(in_ind1, ult_2) &&
+                 sin_arista - distancia(todo[in_ind1].dato, todo[v4].dato) > 0)
+        {
+            vector<Pair> S1, S4;
+            vector<int> sem2 = {in_ind2, ult_1};
+            busquedaR(todo[in_ind1].dato, S1, sem2, k_opt, eps_opt);
+            busquedaR(todo[v4].dato, S4, sem2, k_opt, eps_opt);
+            if (contiene(S1, in_ind1) || contiene(S4, v4))
+            {
+                insertarA(in_ind1, v4);
+                return true;
+            }
+        }
+
+        int v = ult_2; 
+        ult_2 = ult_1; 
+        ult_1 = in_ind2; 
+        in_ind2 = v;
+    }
+
+    // ---- línea 40: revertir ----
+    for (int i = cambiost.size() - 1; i >= 0; i--)
+    {
+        if (cambiost[i].agregada) quitarAr(cambiost[i].ind1, cambiost[i].ind2);
+        else               insertarA(cambiost[i].ind1, cambiost[i].ind2);
+    }
+    return false;
 }
